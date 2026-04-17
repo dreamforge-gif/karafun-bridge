@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" />
+  <title>Settings — Karafun Bridge</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #1a1a2e;
+      --surface:  #16213e;
+      --border:   #2a2a4a;
+      --brand:    #e85d26;
+      --brand-dk: #c44d1e;
+      --text:     #e8e8f0;
+      --muted:    #8888aa;
+      --success:  #22c55e;
+      --error:    #ef4444;
+      --radius:   8px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 24px;
+      gap: 0;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .form-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--brand);
+    }
+
+    select option {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .mode-toggle {
+      display: flex;
+      gap: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 10px;
+      background: var(--surface);
+      color: var(--muted);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .mode-toggle button.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .mode-toggle button:not(.active):hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    footer {
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 12px;
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .btn-save:hover { background: var(--brand-dk); }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-message {
+      min-height: 20px;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+    .status-message.success { color: var(--success); }
+    .status-message.error   { color: var(--error); }
+
+    .key-status {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .key-status.set { color: var(--success); }
+
+    .community-loading {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .load-communities-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+      transition: border-color 0.15s;
+    }
+    .load-communities-btn:hover { border-color: var(--brand); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Karafun Bridge Settings</h1>
+      <p>Connect to your Supabase project and select your community.</p>
+    </header>
+
+    <div class="form-body">
+      <!-- Anon Key -->
+      <div class="field">
+        <label for="anonKey">Supabase Anon Key</label>
+        <input
+          type="password"
+          id="anonKey"
+          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <span class="key-status" id="keyStatus"></span>
+        <span class="field-hint">
+          Found in your Supabase project → Settings → API → anon public key
+        </span>
+      </div>
+
+      <!-- Load Communities -->
+      <div class="field">
+        <label for="communitySelect">Community</label>
+        <select id="communitySelect">
+          <option value="">— enter key above, then load —</option>
+        </select>
+        <button class="load-communities-btn" id="loadCommunitiesBtn" type="button">
+          Load Communities
+        </button>
+        <span class="community-loading" id="communityLoading"></span>
+      </div>
+
+      <!-- Mode -->
+      <div class="field">
+        <label>Queue Mode</label>
+        <div class="mode-toggle">
+          <button id="modeConfirm" class="active" type="button">Confirm</button>
+          <button id="modeAuto" type="button">Auto-Queue</button>
+        </div>
+        <span class="field-hint">
+          <strong>Confirm:</strong> new songs wait for your approval in the Queue Manager.<br/>
+          <strong>Auto:</strong> songs are added to Karafun immediately.
+        </span>
+      </div>
+    </div>
+
+    <footer>
+      <div class="status-message" id="statusMsg"></div>
+      <button class="btn-save" id="saveBtn" type="button">Save Settings</button>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let selectedMode = 'confirm';
+    let communitiesLoaded = false;
+
+    // ── On load: populate current settings ──────────────────────────────────
+    window.bridge.getSettings().then((s) => {
+      if (s.hasAnonKey) {
+        $('keyStatus').textContent = 'Key saved (enter a new one to change)';
+        $('keyStatus').className = 'key-status set';
+      }
+      selectedMode = s.mode || 'confirm';
+      updateModeButtons();
+
+      if (s.communityId) {
+        // Pre-select after loading communities
+        $('communityLoading').textContent = 'Previous community ID: ' + s.communityId;
+      }
+    });
+
+    // ── Mode toggle ──────────────────────────────────────────────────────────
+    function updateModeButtons() {
+      $('modeConfirm').className = selectedMode === 'confirm' ? 'active' : '';
+      $('modeAuto').className = selectedMode === 'auto' ? 'active' : '';
+    }
+
+    $('modeConfirm').addEventListener('click', () => {
+      selectedMode = 'confirm';
+      updateModeButtons();
+    });
+
+    $('modeAuto').addEventListener('click', () => {
+      selectedMode = 'auto';
+      updateModeButtons();
+    });
+
+    // ── Load communities ─────────────────────────────────────────────────────
+    $('loadCommunitiesBtn').addEventListener('click', async () => {
+      const key = $('anonKey').value.trim();
+      if (!key) {
+        showStatus('Enter your Supabase anon key first.', 'error');
+        return;
+      }
+
+      $('loadCommunitiesBtn').disabled = true;
+      $('communityLoading').textContent = 'Loading…';
+
+      // Temporarily save the key so main can init Supabase
+      const tempResult = await window.bridge.saveSettings({
+        anonKey: key,
+        communityId: '__temp__',
+        mode: selectedMode,
+      });
+
+      const result = await window.bridge.getCommunities();
+      $('loadCommunitiesBtn').disabled = false;
+      $('communityLoading').textContent = '';
+
+      if (!result.ok) {
+        showStatus('Could not load communities: ' + result.error, 'error');
+        return;
+      }
+
+      const select = $('communitySelect');
+      select.innerHTML = '<option value="">— select a community —</option>';
+      result.communities.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+      communitiesLoaded = true;
+
+      // Re-select previously saved community
+      window.bridge.getSettings().then((s) => {
+        if (s.communityId && s.communityId !== '__temp__') {
+          select.value = s.communityId;
+        }
+      });
+    });
+
+    // ── Save ─────────────────────────────────────────────────────────────────
+    $('saveBtn').addEventListener('click', async () => {
+      const key = $('anonKey').value.trim();
+      const communityId = $('communitySelect').value;
+
+      if (!key) {
+        showStatus('Supabase anon key is required.', 'error');
+        return;
+      }
+      if (!communityId || communityId === '__temp__') {
+        showStatus('Please select a community (click Load Communities first).', 'error');
+        return;
+      }
+
+      $('saveBtn').disabled = true;
+      $('saveBtn').textContent = 'Saving…';
+
+      const result = await window.bridge.saveSettings({
+        anonKey: key,
+        communityId,
+        mode: selectedMode,
+      });
+
+      $('saveBtn').disabled = false;
+      $('saveBtn').textContent = 'Save Settings';
+
+      if (result && result.ok) {
+        showStatus('Settings saved! Supabase subscription started.', 'success');
+        $('keyStatus').textContent = 'Key saved';
+        $('keyStatus').className = 'key-status set';
+        $('anonKey').value = '';
+      } else {
+        showStatus('Error: ' + (result ? result.error : 'Unknown error'), 'error');
+      }
+    });
+
+    function showStatus(msg, type) {
+      const el = $('statusMsg');
+      el.textContent = msg;
+      el.className = 'status-message ' + type;
+      setTimeout(() => {
+        el.textContent = '';
+        el.className = 'status-message';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

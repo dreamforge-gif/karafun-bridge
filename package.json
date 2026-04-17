@@ -1,0 +1,72 @@
+{
+  "name": "karafun-bridge",
+  "version": "1.0.0",
+  "description": "Bridges The Regular App song queue to Karafun karaoke software",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --mac",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "make": "electron-builder"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.4",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.theregularapp.karafun-bridge",
+    "productName": "Regular App Karafun Bridge",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "artifactName": "karafun-bridge-win.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.music",
+      "artifactName": "karafun-bridge-mac.dmg"
+    },
+    "dmg": {
+      "title": "Regular App Karafun Bridge"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
