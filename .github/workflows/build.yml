@@ -1,0 +1,102 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # fires on v1.0.0, v1.0.1, etc.
+  workflow_dispatch:  # allows manual trigger from GitHub UI
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows portable
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run build:win
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: karafun-bridge-win
+          path: dist/karafun-bridge-win.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Mac DMG
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run build:mac
+
+      - name: Upload Mac artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: karafun-bridge-mac
+          path: dist/karafun-bridge-mac.dmg
+
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: karafun-bridge-win
+
+      - name: Download Mac artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: karafun-bridge-mac
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Karafun Bridge ${{ github.ref_name }}
+          body: |
+            ## Regular App Karafun Bridge ${{ github.ref_name }}
+
+            Download the installer for your platform and run it. The bridge connects your
+            Regular App song queue to Karafun running on your venue machine.
+
+            ### Install
+            - **Windows**: Download and run `karafun-bridge-win.exe`
+            - **Mac**: Download `karafun-bridge-mac.dmg`, open it, drag to Applications
+
+            ### First-time setup
+            1. Launch the app — it appears in your system tray
+            2. Click the tray icon → Settings
+            3. Paste your Regular App anon key and select your community
+            4. Make sure Karafun is running in Remote Control mode
+
+            > Built automatically from source. Not code-signed — Windows/Mac may show a security warning; click "More info → Run anyway" (Windows) or right-click → Open (Mac).
+          files: |
+            karafun-bridge-win.exe
+            karafun-bridge-mac.dmg
+          draft: false
+          prerelease: false

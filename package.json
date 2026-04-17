@@ -18,6 +18,10 @@
     "electron": "^30.0.0",
     "electron-builder": "^24.13.3"
   },
+  "author": {
+    "name": "The Regular App",
+    "email": "hello@theregularapp.com"
+  },
   "build": {
     "appId": "com.theregularapp.karafun-bridge",
     "productName": "Regular App Karafun Bridge",
@@ -40,7 +44,9 @@
         }
       ],
       "icon": "assets/icon.png",
-      "artifactName": "karafun-bridge-win.exe"
+      "artifactName": "karafun-bridge-win.exe",
+      "signingHashAlgorithms": null,
+      "sign": null
     },
     "nsis": {
       "oneClick": false,
@@ -57,7 +63,8 @@
       ],
       "icon": "assets/icon.png",
       "category": "public.app-category.music",
-      "artifactName": "karafun-bridge-mac.dmg"
+      "artifactName": "karafun-bridge-mac.dmg",
+      "identity": null
     },
     "dmg": {
       "title": "Regular App Karafun Bridge"
