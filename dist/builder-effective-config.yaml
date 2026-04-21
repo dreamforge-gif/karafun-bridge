@@ -1,0 +1,42 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.theregularapp.karafun-bridge
+productName: Regular App Karafun Bridge
+files:
+  - filter:
+      - src/**/*
+      - assets/**/*
+      - node_modules/**/*
+extraResources:
+  - from: assets/
+    to: assets/
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.png
+  artifactName: karafun-bridge-win.exe
+  signingHashAlgorithms: null
+  sign: null
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: assets/icon.png
+  category: public.app-category.music
+  artifactName: karafun-bridge-mac.dmg
+  identity: null
+dmg:
+  title: Regular App Karafun Bridge
+linux:
+  target: AppImage
+electronVersion: 30.5.1

@@ -35,6 +35,7 @@ const state = {
   sessionId: null,          // active karaoke session UUID, or null
   sessionStarted: null,     // ISO timestamp when session started
   sessionHostName: null,    // host name entered when starting session
+  sessionVenue: null,       // venue name entered when starting session
 };
 
 // Lazily-required after settings load so we can pass the anon key
@@ -248,6 +249,7 @@ function broadcastStatus() {
     sessionId: state.sessionId,
     sessionStarted: state.sessionStarted,
     sessionHostName: state.sessionHostName,
+    sessionVenue: state.sessionVenue,
   };
   const windows = BrowserWindow.getAllWindows();
   windows.forEach((w) => {
@@ -307,7 +309,8 @@ async function skipSong(songId) {
 }
 
 // ─── Supabase initialisation ──────────────────────────────────────────────────
-function initSupabase(communityId) {
+// sessionId: if provided, poll filters to that session only; null = community-level
+function initSupabase(communityId, sessionId = null) {
   if (!supabase) {
     supabase = require('./supabase-client');
     supabase.init();
@@ -316,9 +319,10 @@ function initSupabase(communityId) {
 
   supabase.subscribeToQueue(
     communityId,
+    sessionId,
     (row) => handleNewSong(row),
     (status, err) => {
-      console.log('Supabase realtime status:', status, err || '');
+      console.log('Supabase status:', status, err || '');
       state.supabaseConnected = status === 'SUBSCRIBED';
       state.supabaseStatus = status;
       state.supabaseError = err ? String(err) : null;
@@ -369,14 +373,21 @@ ipcMain.handle('get-status', () => ({
   sessionId: state.sessionId,
   sessionStarted: state.sessionStarted,
   sessionHostName: state.sessionHostName,
+  sessionVenue: state.sessionVenue,
 }));
 
-ipcMain.handle('start-session', async (_event, hostName) => {
+ipcMain.handle('start-session', async (_event, { hostName, venue } = {}) => {
   try {
-    const session = await supabase.createSession(state.communityId, hostName);
-    state.sessionId = session.id;
+    if (!state.communityId) return { ok: false, error: 'No community selected.' };
+    const session = await supabase.createSession(state.communityId, hostName, venue);
+    state.sessionId      = session.id;
     state.sessionStarted = session.started_at;
     state.sessionHostName = hostName || null;
+    state.sessionVenue    = venue || null;
+    // Re-subscribe filtered to this session — KJ only sees songs for their session
+    state.pendingSongs = [];
+    initSupabase(state.communityId, session.id);
+    broadcastSongs();
     broadcastStatus();
     refreshTray();
     return { ok: true, sessionId: session.id };
@@ -388,14 +399,16 @@ ipcMain.handle('start-session', async (_event, hostName) => {
 ipcMain.handle('end-session', async () => {
   if (!state.sessionId) return { ok: true };
   try {
-    // Cancel any remaining submitted songs for this session
     await supabase.cancelSessionSongs(state.sessionId);
     await supabase.endSession(state.sessionId);
-    state.sessionId = null;
-    state.sessionStarted = null;
+    const prevCommunity = state.communityId;
+    state.sessionId       = null;
+    state.sessionStarted  = null;
     state.sessionHostName = null;
-    // Clear pending songs from this session
-    state.pendingSongs = [];
+    state.sessionVenue    = null;
+    state.pendingSongs    = [];
+    // Re-subscribe at community level (no session filter)
+    if (prevCommunity) initSupabase(prevCommunity, null);
     broadcastSongs();
     broadcastStatus();
     refreshTray();

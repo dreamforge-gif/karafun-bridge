@@ -27,8 +27,12 @@ function getClient() {
 // Uses REST polling (3s interval) instead of WebSocket realtime.
 // WebSocket connections consistently time out in Electron on Windows due to
 // firewall / network stack issues. REST works fine.
+//
+// If sessionId is provided, only songs for that specific session are surfaced.
+// If sessionId is null, falls back to community-level filtering (all songs for
+// the community regardless of session).
 
-function subscribeToQueue(communityId, onNewSong, onStatusChange) {
+function subscribeToQueue(communityId, sessionId, onNewSong, onStatusChange) {
   // Cancel any existing poll before starting a new one
   _stopPoll();
   _seenIds = new Set();
@@ -37,41 +41,55 @@ function subscribeToQueue(communityId, onNewSong, onStatusChange) {
 
   const client = getClient();
 
-  // Seed pass: mark all currently-submitted songs as already seen so we
-  // don't re-alert the KJ for songs that were submitted before this session.
-  client
+  // Build the seed query (only see songs already there — don't re-alert KJ)
+  let seedQ = client
     .from('song_selections')
     .select('id')
-    .eq('community_id', communityId)
-    .eq('status', 'submitted')
-    .then(({ data, error }) => {
-      if (error) {
-        console.error('Supabase seed error:', error.message);
-        if (onStatusChange) onStatusChange('CHANNEL_ERROR', error.message);
-        return;
-      }
-      (data || []).forEach((r) => _seenIds.add(r.id));
-      console.log(`Poll seeded — ${_seenIds.size} existing submitted song(s) ignored`);
+    .eq('status', 'submitted');
 
-      // Flip to "connected"
-      if (onStatusChange) onStatusChange('SUBSCRIBED', null);
+  if (sessionId) {
+    seedQ = seedQ.eq('session_id', sessionId);
+  } else {
+    seedQ = seedQ.eq('community_id', communityId);
+  }
 
-      // Start polling loop
-      _pollTimer = setInterval(
-        () => _pollOnce(communityId, onNewSong),
-        POLL_INTERVAL_MS
-      );
-    });
+  seedQ.then(({ data, error }) => {
+    if (error) {
+      console.error('Supabase seed error:', error.message);
+      if (onStatusChange) onStatusChange('CHANNEL_ERROR', error.message);
+      return;
+    }
+    (data || []).forEach((r) => _seenIds.add(r.id));
+    const filter = sessionId ? `session ${sessionId}` : `community ${communityId}`;
+    console.log(`Poll seeded (${filter}) — ${_seenIds.size} existing song(s) ignored`);
+
+    // Flip to "connected"
+    if (onStatusChange) onStatusChange('SUBSCRIBED', null);
+
+    // Start polling loop
+    _pollTimer = setInterval(
+      () => _pollOnce(communityId, sessionId, onNewSong),
+      POLL_INTERVAL_MS
+    );
+  });
 }
 
-async function _pollOnce(communityId, onNewSong) {
+async function _pollOnce(communityId, sessionId, onNewSong) {
   const client = getClient();
-  const { data, error } = await client
+
+  let q = client
     .from('song_selections')
     .select('*')
-    .eq('community_id', communityId)
     .eq('status', 'submitted')
     .order('created_at', { ascending: true });
+
+  if (sessionId) {
+    q = q.eq('session_id', sessionId);
+  } else {
+    q = q.eq('community_id', communityId);
+  }
+
+  const { data, error } = await q;
 
   if (error) {
     console.error('Poll error:', error.message);
@@ -137,14 +155,15 @@ async function cancelSessionSongs(sessionId) {
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
-async function createSession(communityId, hostName) {
+async function createSession(communityId, hostName, venue) {
   const client = getClient();
   const { data, error } = await client
     .from('karaoke_sessions')
     .insert({
       community_id: communityId,
-      host_name: hostName || null,
-      status: 'active',
+      host_name:    hostName || null,
+      venue:        venue    || null,
+      status:       'active',
     })
     .select()
     .single();
