@@ -5,12 +5,16 @@ const { createClient } = require('@supabase/supabase-js');
 const SUPABASE_URL = 'https://fiegchlcocanlwkwwvrz.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpZWdjaGxjb2Nhbmx3a3d3dnJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTY5MTAsImV4cCI6MjA5MTY5MjkxMH0.nsJahXm0wUrPlcshNRxrJMlDZzpgp4zm0wa7crx2ASk';
 
+const POLL_INTERVAL_MS = 3000; // poll every 3 seconds
+
 let _client = null;
-let _activeChannel = null;
+let _pollTimer = null;
+let _seenIds = new Set(); // track song IDs already surfaced to avoid duplicates
 
 function init() {
+  // No WebSocket realtime options needed — we use REST polling
   _client = createClient(SUPABASE_URL, ANON_KEY, {
-    realtime: { params: { eventsPerSecond: 10 } },
+    realtime: { enabled: false },
   });
 }
 
@@ -19,42 +23,79 @@ function getClient() {
   return _client;
 }
 
-// ── Realtime subscription ─────────────────────────────────────────────────────
+// ── Polling-based queue subscription ─────────────────────────────────────────
+// Uses REST polling (3s interval) instead of WebSocket realtime.
+// WebSocket connections consistently time out in Electron on Windows due to
+// firewall / network stack issues. REST works fine.
 
 function subscribeToQueue(communityId, onNewSong, onStatusChange) {
+  // Cancel any existing poll before starting a new one
+  _stopPoll();
+  _seenIds = new Set();
+
+  if (onStatusChange) onStatusChange('SUBSCRIBING', null);
+
   const client = getClient();
 
-  if (_activeChannel) {
-    client.removeChannel(_activeChannel);
-    _activeChannel = null;
+  // Seed pass: mark all currently-submitted songs as already seen so we
+  // don't re-alert the KJ for songs that were submitted before this session.
+  client
+    .from('song_selections')
+    .select('id')
+    .eq('community_id', communityId)
+    .eq('status', 'submitted')
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Supabase seed error:', error.message);
+        if (onStatusChange) onStatusChange('CHANNEL_ERROR', error.message);
+        return;
+      }
+      (data || []).forEach((r) => _seenIds.add(r.id));
+      console.log(`Poll seeded — ${_seenIds.size} existing submitted song(s) ignored`);
+
+      // Flip to "connected"
+      if (onStatusChange) onStatusChange('SUBSCRIBED', null);
+
+      // Start polling loop
+      _pollTimer = setInterval(
+        () => _pollOnce(communityId, onNewSong),
+        POLL_INTERVAL_MS
+      );
+    });
+}
+
+async function _pollOnce(communityId, onNewSong) {
+  const client = getClient();
+  const { data, error } = await client
+    .from('song_selections')
+    .select('*')
+    .eq('community_id', communityId)
+    .eq('status', 'submitted')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Poll error:', error.message);
+    return; // transient — keep polling
   }
 
-  // Note: we intentionally omit the server-side filter and match community_id
-  // client-side to avoid CHANNEL_ERROR from filter type-mismatch issues.
-  const channel = client
-    .channel('song_queue_all')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'song_selections',
-      },
-      (payload) => {
-        const row = payload.new;
-        // eslint-disable-next-line eqeqeq
-        if (row && row.status === 'submitted' && row.community_id == communityId) {
-          onNewSong(row);
-        }
-      }
-    )
-    .subscribe((status, err) => {
-      console.log('Supabase channel status:', status, err || '');
-      if (onStatusChange) onStatusChange(status, err);
-    });
+  const newSongs = (data || []).filter((r) => !_seenIds.has(r.id));
+  for (const row of newSongs) {
+    _seenIds.add(row.id);
+    console.log('New song (poll):', row.singer_name, '—', row.song_title);
+    onNewSong(row);
+  }
+}
 
-  _activeChannel = channel;
-  return channel;
+function _stopPoll() {
+  if (_pollTimer) {
+    clearInterval(_pollTimer);
+    _pollTimer = null;
+  }
+}
+
+function unsubscribe() {
+  _stopPoll();
+  _seenIds = new Set();
 }
 
 // ── Song selections ───────────────────────────────────────────────────────────
@@ -79,6 +120,8 @@ async function deleteSong(songId) {
     .delete()
     .eq('id', songId);
   if (error) throw error;
+  // Also remove from seen set so it doesn't ghost
+  _seenIds.delete(songId);
 }
 
 // Cancel all submitted songs for a session (called on End Session)
@@ -128,13 +171,6 @@ async function getCommunities() {
     .order('name');
   if (error) throw error;
   return data || [];
-}
-
-function unsubscribe() {
-  if (_client && _activeChannel) {
-    _client.removeChannel(_activeChannel);
-    _activeChannel = null;
-  }
 }
 
 module.exports = {
