@@ -32,6 +32,8 @@ const state = {
   mode: 'confirm',          // 'confirm' | 'auto'
   communityId: null,
   pendingSongs: [],         // songs waiting for manual confirmation
+  writePendingIds: new Set(), // IDs of pendingSongs being auto-retried for KaraFun DB lock
+  writeRetryTimer: null,    // setInterval handle for the retry loop
   sessionId: null,          // active karaoke session UUID, or null
   sessionStarted: null,     // ISO timestamp when session started
   sessionHostName: null,    // host name entered when starting session
@@ -228,12 +230,54 @@ function openQueueWindow() {
   });
 }
 
+// ─── Write-retry loop ─────────────────────────────────────────────────────────
+// When KaraFun's SQLite DB is locked we add the song ID to writePendingIds and
+// start this loop. Every 2.5 s it retries all pending writes. Once a write
+// succeeds the song is removed from pendingSongs and the queue re-renders.
+function startWriteRetryLoop() {
+  if (state.writeRetryTimer) return; // already running
+  console.log('[write-retry] Starting retry loop');
+
+  state.writeRetryTimer = setInterval(async () => {
+    if (state.writePendingIds.size === 0) {
+      clearInterval(state.writeRetryTimer);
+      state.writeRetryTimer = null;
+      console.log('[write-retry] All writes succeeded — stopping retry loop');
+      return;
+    }
+
+    for (const songId of [...state.writePendingIds]) {
+      const row = state.pendingSongs.find((s) => s.id === songId);
+      if (!row) { state.writePendingIds.delete(songId); continue; }
+      if (!karafun || !karafun.isConnected || !row.karafun_song_id) continue;
+
+      try {
+        const queueId = await karafun.addToQueue(row.karafun_song_id, row.singer_name || 'Unknown');
+        await supabase.updateSongStatus(row.id, 'queued', queueId);
+        state.pendingSongs = state.pendingSongs.filter((s) => s.id !== songId);
+        state.writePendingIds.delete(songId);
+        console.log('[write-retry] Queued successfully:', row.song_title);
+        broadcastSongs();
+        refreshTray();
+      } catch (err) {
+        console.warn('[write-retry] Still locked, will retry:', err.message);
+      }
+    }
+  }, 2500);
+}
+
 // ─── IPC broadcasts ───────────────────────────────────────────────────────────
 function broadcastSongs() {
+  // Annotate each pending song with _writePending so the queue window can
+  // show a "retrying" badge instead of the normal ADD button.
+  const payload = state.pendingSongs.map((s) => ({
+    ...s,
+    _writePending: state.writePendingIds.has(s.id),
+  }));
   const windows = BrowserWindow.getAllWindows();
   windows.forEach((w) => {
     if (!w.isDestroyed()) {
-      w.webContents.send('songs-updated', state.pendingSongs);
+      w.webContents.send('songs-updated', payload);
     }
   });
 }
@@ -304,13 +348,19 @@ async function queueSong(row) {
     console.log('Queued:', row.song_title, '→ queueId:', queueId);
   } catch (err) {
     console.error('Failed to queue song:', err);
-    // On failure, add to pending so the KJ can manually action it
+    // Always surface in pending queue so KJ sees it
     if (!state.pendingSongs.find((s) => s.id === row.id)) {
       state.pendingSongs.push(row);
-      broadcastSongs();
-      refreshTray();
-      openQueueWindow();
     }
+    // If it's a DB lock error, start background retry instead of making KJ click ADD
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('locked') || msg.includes('busy')) {
+      state.writePendingIds.add(row.id);
+      startWriteRetryLoop();
+    }
+    broadcastSongs();
+    refreshTray();
+    openQueueWindow();
   }
 }
 
@@ -318,6 +368,7 @@ async function skipSong(songId) {
   const idx = state.pendingSongs.findIndex((s) => s.id === songId);
   if (idx === -1) return;
   const [row] = state.pendingSongs.splice(idx, 1);
+  state.writePendingIds.delete(songId); // cancel any pending retry
   broadcastSongs();
   refreshTray();
   try {
@@ -506,6 +557,7 @@ ipcMain.handle('delete-song', async (_event, songId) => {
   const idx = state.pendingSongs.findIndex((s) => s.id === songId);
   if (idx !== -1) {
     state.pendingSongs.splice(idx, 1);
+    state.writePendingIds.delete(songId); // cancel any pending retry
     broadcastSongs();
     refreshTray();
   }
@@ -531,19 +583,22 @@ ipcMain.handle('add-song', async (_event, songId) => {
   try {
     const queueId = await karafun.addToQueue(row.karafun_song_id, row.singer_name || 'Unknown');
     await supabase.updateSongStatus(row.id, 'queued', queueId);
-
-    // Remove from pending
     state.pendingSongs = state.pendingSongs.filter((s) => s.id !== songId);
+    state.writePendingIds.delete(songId);
     broadcastSongs();
     refreshTray();
     return { ok: true, queueId };
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
     const isLock = msg.includes('locked') || msg.includes('busy');
-    const userMsg = isLock
-      ? 'KaraFun database is busy — KaraFun had the DB locked. Try clicking ADD again in a moment.'
-      : err.message;
-    return { ok: false, error: userMsg };
+    if (isLock) {
+      // Don't surface as an error — start background retry instead
+      state.writePendingIds.add(songId);
+      broadcastSongs(); // card flips to ⏳ Retrying badge
+      startWriteRetryLoop();
+      return { ok: true, retrying: true };
+    }
+    return { ok: false, error: err.message };
   }
 });
 

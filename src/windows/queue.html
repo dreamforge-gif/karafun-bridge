@@ -22,6 +22,8 @@
       --error:    #ef4444;
       --error-dk: #dc2626;
       --warning:  #eab308;
+      --session:  #a855f7;
+      --session-dk: #9333ea;
       --radius:   8px;
     }
 
@@ -78,6 +80,62 @@
       background: var(--surface2);
       color: var(--muted);
     }
+
+    /* ── Session banner ── */
+    .session-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: rgba(168, 85, 247, 0.12);
+      border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+      flex-shrink: 0;
+    }
+    .session-banner.active { display: flex; }
+
+    .session-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--session);
+      box-shadow: 0 0 6px var(--session);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .session-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .session-info strong {
+      font-size: 12px;
+      color: var(--session);
+      font-weight: 600;
+    }
+    .session-timer {
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+
+    .btn-end-session {
+      padding: 4px 12px;
+      border: 1px solid var(--session);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--session);
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-end-session:hover { background: var(--session); color: #fff; }
+    .btn-end-session:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── Header ── */
     header {
@@ -205,23 +263,13 @@
     .btn-add:hover { background: var(--success-dk); }
     .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .btn-skip { background: transparent; color: var(--error); border: 1px solid var(--error); }
-    .btn-skip:hover { background: var(--error); color: #fff; }
+    .btn-skip { background: transparent; color: var(--warning); border: 1px solid var(--warning); }
+    .btn-skip:hover { background: var(--warning); color: #000; }
     .btn-skip:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* ── Auto mode overlay ── */
-    .auto-mode-notice {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 24px;
-      gap: 8px;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    .auto-mode-notice .icon { font-size: 32px; }
+    .btn-delete { background: transparent; color: var(--error); border: 1px solid var(--error); padding: 6px 10px; }
+    .btn-delete:hover { background: var(--error); color: #fff; }
+    .btn-delete:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── Footer ── */
     footer {
@@ -232,14 +280,146 @@
       justify-content: space-between;
       flex-shrink: 0;
       background: var(--surface);
+      gap: 12px;
     }
 
     .pending-count {
       font-size: 12px;
       color: var(--muted);
+      flex-shrink: 0;
     }
 
     .pending-count strong { color: var(--text); }
+
+    .btn-start-session {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--session);
+      color: #fff;
+      white-space: nowrap;
+      transition: background 0.15s, opacity 0.15s;
+      letter-spacing: 0.04em;
+    }
+    .btn-start-session:hover { background: var(--session-dk); }
+    .btn-start-session:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Start Session modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal h2 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .modal p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: -8px;
+    }
+
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modal-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .modal-field input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 8px 12px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .modal-field input:focus { border-color: var(--session); }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-ghost {
+      padding: 7px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+    .btn-confirm {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--session);
+      color: #fff;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-confirm:hover { background: var(--session-dk); }
+    .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── End session confirm inline ── */
+    .end-confirm {
+      display: none;
+      position: fixed;
+      bottom: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--error);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      z-index: 150;
+      font-size: 13px;
+      display: none;
+      gap: 12px;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .end-confirm.show { display: flex; }
 
     .error-toast {
       position: fixed;
@@ -273,6 +453,16 @@
       <span class="mode-badge" id="modeBadge">Confirm Mode</span>
     </div>
 
+    <!-- Session Banner -->
+    <div class="session-banner" id="sessionBanner">
+      <div class="session-dot"></div>
+      <div class="session-info">
+        <strong id="sessionHostLabel">Session Active</strong>
+        <span class="session-timer" id="sessionTimer"></span>
+      </div>
+      <button class="btn-end-session" id="btnEndSession">End Session</button>
+    </div>
+
     <!-- Header -->
     <header>
       <h1>Pending Songs</h1>
@@ -292,7 +482,31 @@
       <span class="pending-count" id="pendingCount">
         <strong>0</strong> songs pending
       </span>
+      <button class="btn-start-session" id="btnStartSession">▶ Start Session</button>
     </footer>
+  </div>
+
+  <!-- Start Session Modal -->
+  <div class="modal-overlay" id="startModal">
+    <div class="modal">
+      <h2>🎤 Start a Session</h2>
+      <p>Songs submitted during this session will be tracked together. End the session to clear the queue.</p>
+      <div class="modal-field">
+        <label>Host Name (optional)</label>
+        <input type="text" id="hostNameInput" placeholder="e.g. DJ Brand" maxlength="64" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="btnCancelStart">Cancel</button>
+        <button class="btn-confirm" id="btnConfirmStart">Start Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Session Confirm -->
+  <div class="end-confirm" id="endConfirm">
+    <span>End session? All pending songs will be cancelled.</span>
+    <button class="btn-confirm" id="btnConfirmEnd" style="background:var(--error);">End Session</button>
+    <button class="btn-ghost" id="btnCancelEnd">Keep Going</button>
   </div>
 
   <div class="error-toast" id="errorToast"></div>
@@ -301,6 +515,8 @@
     let currentSongs = [];
     let currentStatus = {};
     let actionInProgress = new Set();
+    let sessionStartedAt = null;
+    let timerInterval = null;
 
     // ── Initial data load ───────────────────────────────────────────────────
     Promise.all([
@@ -320,6 +536,33 @@
       window.bridge.removeStatusListener();
     });
 
+    // ── Session timer ───────────────────────────────────────────────────────
+    function startTimer(startedAt) {
+      sessionStartedAt = startedAt ? new Date(startedAt) : new Date();
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(tickTimer, 1000);
+      tickTimer();
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      sessionStartedAt = null;
+    }
+
+    function tickTimer() {
+      if (!sessionStartedAt) return;
+      const elapsed = Math.floor((Date.now() - sessionStartedAt.getTime()) / 1000);
+      const h = Math.floor(elapsed / 3600);
+      const m = Math.floor((elapsed % 3600) / 60);
+      const s = elapsed % 60;
+      const parts = [];
+      if (h > 0) parts.push(String(h).padStart(2,'0') + 'h');
+      parts.push(String(m).padStart(2,'0') + 'm');
+      parts.push(String(s).padStart(2,'0') + 's');
+      document.getElementById('sessionTimer').textContent = parts.join(' ');
+    }
+
     // ── Render helpers ──────────────────────────────────────────────────────
     function renderStatus(status) {
       currentStatus = status || {};
@@ -330,6 +573,8 @@
       const sLabel = document.getElementById('sLabel');
       const badge  = document.getElementById('modeBadge');
       const sub    = document.getElementById('headerSub');
+      const banner = document.getElementById('sessionBanner');
+      const btnStart = document.getElementById('btnStartSession');
 
       kDot.className   = 'status-dot ' + (status.karafunConnected ? 'dot-green' : 'dot-yellow');
       kLabel.textContent = 'Karafun: ' + (status.karafunConnected ? 'Connected' : 'Not Running');
@@ -342,6 +587,24 @@
       sub.textContent = isAuto
         ? 'Auto mode is on — songs queue directly in Karafun'
         : 'Songs waiting for your approval';
+
+      // Session state
+      const hasSession = !!status.sessionId;
+      banner.classList.toggle('active', hasSession);
+      btnStart.style.display = hasSession ? 'none' : '';
+
+      if (hasSession) {
+        const hostLabel = status.sessionHostName
+          ? 'Session — ' + status.sessionHostName
+          : 'Session Active';
+        document.getElementById('sessionHostLabel').textContent = hostLabel;
+        if (!sessionStartedAt) {
+          startTimer(status.sessionStarted);
+        }
+      } else {
+        stopTimer();
+        document.getElementById('sessionTimer').textContent = '';
+      }
     }
 
     function renderSongs(songs) {
@@ -372,11 +635,28 @@
       const hasKarafunId = !!song.karafun_song_id;
       const inProgress   = actionInProgress.has(song.id);
       const kConnected   = currentStatus.karafunConnected;
-      const canAdd       = hasKarafunId && kConnected && !inProgress;
+      const isRetrying   = !!song._writePending; // background retry in progress
+      const canAdd       = hasKarafunId && kConnected && !inProgress && !isRetrying;
 
       const card = document.createElement('div');
       card.className = 'song-card';
+      if (isRetrying) card.style.borderColor = 'var(--warning)';
       card.dataset.id = song.id;
+
+      const statusLine = isRetrying
+        ? `<div class="no-karafun-id" style="color:var(--warning);">⏳ KaraFun DB locked — retrying automatically…</div>`
+        : !hasKarafunId
+          ? `<div class="no-karafun-id">⚠ No Karafun ID — cannot auto-add</div>`
+          : '';
+
+      const addBtn = isRetrying
+        ? `<span style="font-size:12px;color:var(--warning);padding:4px 8px;white-space:nowrap;">⏳ Retrying…</span>`
+        : `<button
+            class="btn-action btn-add"
+            data-action="add"
+            ${canAdd ? '' : 'disabled'}
+            title="${!kConnected ? 'Karafun is not running' : !hasKarafunId ? 'No Karafun ID set for this song' : 'Add to Karafun queue'}"
+          >${inProgress ? '…' : 'ADD'}</button>`;
 
       card.innerHTML = `
         <div class="song-info">
@@ -385,38 +665,29 @@
           <div class="song-singer">
             <span>🎤</span> ${esc(song.singer_name || 'Unknown Singer')}
           </div>
-          ${!hasKarafunId
-            ? '<div class="no-karafun-id">⚠ No Karafun ID — cannot auto-add</div>'
-            : ''}
+          ${statusLine}
         </div>
         <div class="song-actions">
-          <button
-            class="btn-action btn-add"
-            data-id="${song.id}"
-            ${canAdd ? '' : 'disabled'}
-            title="${!kConnected ? 'Karafun is not running' : !hasKarafunId ? 'No Karafun ID set for this song' : 'Add to Karafun queue'}"
-          >
-            ${inProgress ? '…' : 'ADD TO KARAFUN'}
-          </button>
+          ${addBtn}
           <button
             class="btn-action btn-skip"
-            data-id="${song.id}"
+            data-action="skip"
+            ${inProgress || isRetrying ? 'disabled' : ''}
+          >SKIP</button>
+          <button
+            class="btn-action btn-delete"
+            data-action="delete"
             ${inProgress ? 'disabled' : ''}
-          >
-            SKIP
-          </button>
+            title="Remove this song request"
+          >🗑</button>
         </div>
       `;
 
-      // Add button
-      card.querySelector('.btn-add').addEventListener('click', async () => {
-        await doAction(song.id, 'add');
-      });
-
-      // Skip button
-      card.querySelector('.btn-skip').addEventListener('click', async () => {
-        await doAction(song.id, 'skip');
-      });
+      if (!isRetrying) {
+        card.querySelector('[data-action="add"]').addEventListener('click', () => doAction(song.id, 'add'));
+      }
+      card.querySelector('[data-action="skip"]').addEventListener('click', () => doAction(song.id, 'skip'));
+      card.querySelector('[data-action="delete"]').addEventListener('click', () => doAction(song.id, 'delete'));
 
       return card;
     }
@@ -427,10 +698,16 @@
       refreshCard(songId);
 
       let result;
-      if (type === 'add') {
-        result = await window.bridge.addSong(songId);
-      } else {
-        result = await window.bridge.skipSong(songId);
+      try {
+        if (type === 'add') {
+          result = await window.bridge.addSong(songId);
+        } else if (type === 'skip') {
+          result = await window.bridge.skipSong(songId);
+        } else if (type === 'delete') {
+          result = await window.bridge.deleteSong(songId);
+        }
+      } catch (e) {
+        result = { ok: false, error: String(e) };
       }
 
       actionInProgress.delete(songId);
@@ -438,6 +715,9 @@
       if (!result || !result.ok) {
         showError(result ? result.error : 'Unknown error');
         refreshCard(songId);
+      } else if (result.retrying) {
+        // Lock error — background retry started, queue window will update via songs-updated
+        showToast('⏳ KaraFun DB is busy — retrying automatically in the background', 'var(--warning)');
       }
       // Main will push songs-updated event so list re-renders automatically
     }
@@ -451,11 +731,81 @@
       card.replaceWith(newCard);
     }
 
+    // ── Start Session ───────────────────────────────────────────────────────
+    const startModal = document.getElementById('startModal');
+    const hostNameInput = document.getElementById('hostNameInput');
+    const btnConfirmStart = document.getElementById('btnConfirmStart');
+
+    document.getElementById('btnStartSession').addEventListener('click', () => {
+      hostNameInput.value = '';
+      startModal.classList.add('open');
+      setTimeout(() => hostNameInput.focus(), 50);
+    });
+
+    document.getElementById('btnCancelStart').addEventListener('click', () => {
+      startModal.classList.remove('open');
+    });
+
+    hostNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnConfirmStart.click();
+      if (e.key === 'Escape') startModal.classList.remove('open');
+    });
+
+    btnConfirmStart.addEventListener('click', async () => {
+      btnConfirmStart.disabled = true;
+      btnConfirmStart.textContent = 'Starting…';
+      try {
+        const result = await window.bridge.startSession(hostNameInput.value.trim() || null);
+        if (!result || !result.ok) throw new Error(result ? result.error : 'Failed');
+        startModal.classList.remove('open');
+      } catch (e) {
+        showError('Could not start session: ' + e.message);
+      }
+      btnConfirmStart.disabled = false;
+      btnConfirmStart.textContent = 'Start Session';
+    });
+
+    // Close modal on overlay click
+    startModal.addEventListener('click', (e) => {
+      if (e.target === startModal) startModal.classList.remove('open');
+    });
+
+    // ── End Session ─────────────────────────────────────────────────────────
+    const endConfirm = document.getElementById('endConfirm');
+
+    document.getElementById('btnEndSession').addEventListener('click', () => {
+      endConfirm.classList.add('show');
+    });
+
+    document.getElementById('btnCancelEnd').addEventListener('click', () => {
+      endConfirm.classList.remove('show');
+    });
+
+    document.getElementById('btnConfirmEnd').addEventListener('click', async () => {
+      const btn = document.getElementById('btnConfirmEnd');
+      btn.disabled = true;
+      btn.textContent = 'Ending…';
+      endConfirm.classList.remove('show');
+      try {
+        const result = await window.bridge.endSession();
+        if (!result || !result.ok) throw new Error(result ? result.error : 'Failed');
+      } catch (e) {
+        showError('Could not end session: ' + e.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'End Session';
+    });
+
     function showError(msg) {
+      showToast(msg, 'var(--error)');
+    }
+
+    function showToast(msg, bgColor) {
       const toast = document.getElementById('errorToast');
       toast.textContent = msg;
+      toast.style.background = bgColor || 'var(--error)';
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 4000);
+      setTimeout(() => toast.classList.remove('show'), 5000);
     }
 
     function esc(str) {
