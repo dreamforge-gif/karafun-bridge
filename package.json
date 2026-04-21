@@ -1,6 +1,6 @@
 {
   "name": "karafun-bridge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Bridges The Regular App song queue to Karafun karaoke software",
   "main": "src/main.js",
   "scripts": {

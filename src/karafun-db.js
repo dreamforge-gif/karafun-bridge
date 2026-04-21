@@ -77,45 +77,56 @@ class KarafunDB extends EventEmitter {
       throw new Error('KaraFun is not running');
     }
 
-    // Retry up to 4 times — SQLite "database is locked" can be transient
-    // when KaraFun holds a write lock for a brief moment.
-    const MAX_ATTEMPTS = 4;
-    const RETRY_DELAY_MS = 600;
+    // Retry up to 6 times — SQLite "database is locked/busy" is transient
+    // when KaraFun holds a write lock. We wait generously between retries.
+    const MAX_ATTEMPTS = 6;
+    const RETRY_DELAY_MS = 2000;
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       if (attempt > 0) {
-        // Synchronous busy-wait between retries (better-sqlite3 is sync-only)
         const until = Date.now() + RETRY_DELAY_MS;
-        while (Date.now() < until) { /* spin */ }
+        while (Date.now() < until) { /* spin — better-sqlite3 is sync-only */ }
         console.log(`[karafun-db] Retry ${attempt}/${MAX_ATTEMPTS - 1} after lock…`);
       }
 
       let db;
       try {
-        db = new Database(DB_PATH, { fileMustExist: true, timeout: 8000 });
-        // Set busy_timeout via pragma as well — constructor timeout covers
-        // the connection open but pragma covers subsequent statement waits.
-        db.pragma('busy_timeout = 8000');
+        // timeout: SQLite will internally wait up to 20s before surfacing BUSY.
+        db = new Database(DB_PATH, { fileMustExist: true, timeout: 20000 });
+        db.pragma('busy_timeout = 20000');
 
-        // Wrap read+write in a single deferred transaction to minimise
-        // the window during which we hold a write lock.
-        const nextId = db.transaction(() => {
+        // Enable WAL mode — reduces contention between our writes and KaraFun's
+        // reads. WAL lets readers and writers proceed concurrently; journal mode
+        // requires an exclusive lock. Safe to set even if KaraFun already uses WAL.
+        try { db.pragma('journal_mode = WAL'); } catch (_) { /* ignore if locked */ }
+
+        // Use BEGIN IMMEDIATE instead of DEFERRED (the default).
+        // DEFERRED starts in read mode and upgrades to write when it hits the
+        // INSERT — exactly the moment another writer can have snatched the lock,
+        // causing SQLITE_BUSY. IMMEDIATE acquires the write lock upfront, so
+        // SQLite's internal busy_timeout applies right from the start.
+        let nextId;
+        db.exec('BEGIN IMMEDIATE');
+        try {
           const row = db.prepare('SELECT MAX(item_id) AS max_id FROM queue_item').get();
-          const id  = (row?.max_id || 0) + 1;
+          nextId = (row?.max_id || 0) + 1;
           db.prepare(`
             INSERT INTO queue_item
               (item_id, uuid, item_type_id, item_ref_id, origin, singer_name)
             VALUES
               (@item_id, @uuid, 1, @song_id, 'app', @singer_name)
           `).run({
-            item_id:     id,
+            item_id:     nextId,
             uuid:        randomUUID(),
             song_id:     karafunSongId,
             singer_name: singerName || null,
           });
-          return id;
-        })();
+          db.exec('COMMIT');
+        } catch (txErr) {
+          try { db.exec('ROLLBACK'); } catch (_) {}
+          throw txErr;
+        }
 
         console.log(`[karafun-db] Queued song ${karafunSongId} for "${singerName}" → item_id ${nextId}`);
         return String(nextId);

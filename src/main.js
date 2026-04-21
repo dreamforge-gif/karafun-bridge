@@ -538,9 +538,10 @@ ipcMain.handle('add-song', async (_event, songId) => {
     refreshTray();
     return { ok: true, queueId };
   } catch (err) {
-    const isLock = err.message && err.message.toLowerCase().includes('locked');
+    const msg = (err.message || '').toLowerCase();
+    const isLock = msg.includes('locked') || msg.includes('busy');
     const userMsg = isLock
-      ? 'KaraFun database is busy — try clicking ADD again in a moment'
+      ? 'KaraFun database is busy — KaraFun had the DB locked. Try clicking ADD again in a moment.'
       : err.message;
     return { ok: false, error: userMsg };
   }
