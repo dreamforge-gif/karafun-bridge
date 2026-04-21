@@ -7,7 +7,15 @@ contextBridge.exposeInMainWorld('bridge', {
   getSongs: () => ipcRenderer.invoke('get-songs'),
   addSong: (id) => ipcRenderer.invoke('add-song', id),
   skipSong: (id) => ipcRenderer.invoke('skip-song', id),
+  deleteSong: (id) => ipcRenderer.invoke('delete-song', id),
   getStatus: () => ipcRenderer.invoke('get-status'),
+
+  // --- Sessions ---
+  startSession: (hostName) => ipcRenderer.invoke('start-session', hostName),
+  endSession: () => ipcRenderer.invoke('end-session'),
+  listSessions: () => ipcRenderer.invoke('list-sessions'),
+  endSessionById: (id) => ipcRenderer.invoke('end-session-by-id', id),
+  deleteSessionById: (id) => ipcRenderer.invoke('delete-session-by-id', id),
 
   // --- Settings ---
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),

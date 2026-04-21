@@ -175,6 +175,18 @@ async function endSession(sessionId) {
   if (error) throw error;
 }
 
+async function listSessions(communityId) {
+  const client = getClient();
+  const { data, error } = await client
+    .from('karaoke_sessions')
+    .select('id, host_name, venue, status, started_at, ended_at')
+    .eq('community_id', communityId)
+    .order('started_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data || [];
+}
+
 // ── Communities ───────────────────────────────────────────────────────────────
 
 async function getCommunities() {
@@ -190,6 +202,6 @@ async function getCommunities() {
 module.exports = {
   init, getClient,
   subscribeToQueue, updateSongStatus, deleteSong, cancelSessionSongs,
-  createSession, endSession,
+  createSession, endSession, listSessions,
   getCommunities, unsubscribe,
 };

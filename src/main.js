@@ -437,6 +437,52 @@ ipcMain.handle('end-session', async () => {
   }
 });
 
+// List all sessions for the current community (for the Sessions tab)
+ipcMain.handle('list-sessions', async () => {
+  if (!supabase || !state.communityId) return { ok: true, sessions: [] };
+  try {
+    const sessions = await supabase.listSessions(state.communityId);
+    return { ok: true, sessions };
+  } catch (err) {
+    return { ok: false, error: err.message, sessions: [] };
+  }
+});
+
+ipcMain.handle('end-session-by-id', async (_event, id) => {
+  try {
+    await supabase.endSession(id);
+    // If this was the bridge's own session, clear local state too
+    if (state.sessionId === id) {
+      state.sessionId = null; state.sessionStarted = null;
+      state.sessionHostName = null; state.sessionVenue = null;
+      state.pendingSongs = [];
+      if (state.communityId) initSupabase(state.communityId, null);
+      broadcastSongs(); broadcastStatus(); refreshTray();
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('delete-session-by-id', async (_event, id) => {
+  try {
+    const client = supabase.getClient();
+    const { error } = await client.from('karaoke_sessions').delete().eq('id', id);
+    if (error) throw error;
+    if (state.sessionId === id) {
+      state.sessionId = null; state.sessionStarted = null;
+      state.sessionHostName = null; state.sessionVenue = null;
+      state.pendingSongs = [];
+      if (state.communityId) initSupabase(state.communityId, null);
+      broadcastSongs(); broadcastStatus(); refreshTray();
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 ipcMain.handle('delete-song', async (_event, songId) => {
   const idx = state.pendingSongs.findIndex((s) => s.id === songId);
   if (idx !== -1) {

@@ -19,253 +19,136 @@
       --muted:    #8888aa;
       --success:  #22c55e;
       --error:    #ef4444;
+      --purple:   #7c3aed;
       --radius:   8px;
     }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
+    html, body { height: 100%; background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
-    }
+      font-size: 14px; line-height: 1.5; }
 
-    .container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      padding: 24px;
-    }
+    .container { display: flex; flex-direction: column; height: 100%; }
 
-    header {
-      margin-bottom: 28px;
-    }
+    /* ── Tab bar ── */
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab-btn { flex: 1; padding: 12px 0; background: none; border: none; color: var(--muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: color 0.15s;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--brand); }
 
-    header h1 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
-    }
+    /* ── Tab panels ── */
+    .tab-panel { display: none; flex: 1; flex-direction: column; overflow-y: auto; padding: 20px 24px; }
+    .tab-panel.active { display: flex; }
 
-    header p {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 4px;
-    }
-
-    .form-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    label {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-    }
-
-    select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 10px 12px;
-      font-size: 14px;
-      width: 100%;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    select:focus { border-color: var(--brand); }
+    /* ── Fields ── */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+    label { font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); }
+    select, input[type=text] {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); padding: 10px 12px; font-size: 14px; width: 100%;
+      outline: none; transition: border-color 0.15s; }
+    select:focus, input:focus { border-color: var(--brand); }
     select:disabled { opacity: 0.5; }
+    select option { background: var(--surface); color: var(--text); }
+    .field-hint { font-size: 11px; color: var(--muted); }
 
-    select option {
-      background: var(--surface);
-      color: var(--text);
-    }
+    /* ── Mode toggle ── */
+    .mode-toggle { display: flex; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .mode-toggle button { flex: 1; padding: 10px; background: var(--surface); color: var(--muted);
+      border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.15s, color 0.15s; }
+    .mode-toggle button.active { background: var(--brand); color: #fff; }
+    .mode-toggle button:not(.active):hover { background: var(--border); color: var(--text); }
 
-    .field-hint {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .mode-toggle {
-      display: flex;
-      gap: 0;
-      border-radius: var(--radius);
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .mode-toggle button {
-      flex: 1;
-      padding: 10px;
-      background: var(--surface);
-      color: var(--muted);
-      border: none;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .mode-toggle button.active {
-      background: var(--brand);
-      color: #fff;
-    }
-
-    .mode-toggle button:not(.active):hover {
-      background: var(--border);
-      color: var(--text);
-    }
-
-    footer {
-      padding-top: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .btn-save {
-      width: 100%;
-      padding: 12px;
-      background: var(--brand);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
-    }
-
+    /* ── Buttons ── */
+    .btn-save { width: 100%; padding: 12px; background: var(--brand); color: #fff;
+      border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; margin-top: auto; }
     .btn-save:hover { background: var(--brand-dk); }
     .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .status-message {
-      min-height: 20px;
-      text-align: center;
-      font-size: 12px;
-      border-radius: 4px;
-      padding: 4px 8px;
-    }
-    .status-message.success { color: var(--success); }
-    .status-message.error   { color: var(--error); }
+    .btn { padding: 9px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s; }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-dk); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--text); }
+    .btn-danger { background: transparent; color: var(--error); border: 1px solid rgba(239,68,68,0.4); }
+    .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,0.08); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .loading-hint {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .connection-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.04);
-      color: var(--muted);
-    }
-    .connection-badge.connected  { color: var(--success); border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.08); }
-    .connection-badge.error      { color: var(--error);   border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.08); }
-    .connection-badge.connecting { color: #f59e0b;        border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.08); }
+    /* ── Status badge ── */
+    .connection-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+      font-weight: 600; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--muted); }
+    .connection-badge.connected { color: var(--success); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+    .connection-badge.error { color: var(--error); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); }
+    .connection-badge.connecting { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
-    /* Session controls */
-    .session-input {
-      display: block;
-      width: 100%;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 13px;
-      margin-bottom: 7px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
+    /* ── Session controls (Settings tab) ── */
+    .session-input { display: block; width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--surface); color: var(--text);
+      font-size: 13px; margin-bottom: 7px; outline: none; transition: border-color 0.15s; }
     .session-input:focus { border-color: var(--brand); }
-
-    .btn-session {
-      width: 100%;
-      padding: 10px;
-      background: #7c3aed;
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
-      margin-top: 2px;
-    }
+    .btn-session { width: 100%; padding: 10px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; margin-top: 2px; }
     .btn-session:hover:not(:disabled) { background: #6d28d9; }
     .btn-session:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-end-session {
-      width: 100%;
-      padding: 10px;
-      background: transparent;
-      color: var(--error);
-      border: 1px solid rgba(239,68,68,0.4);
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
+    .btn-end-session { width: 100%; padding: 10px; background: transparent; color: var(--error);
+      border: 1px solid rgba(239,68,68,0.4); border-radius: var(--radius); font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: background 0.15s; }
     .btn-end-session:hover { background: rgba(239,68,68,0.08); }
-
-    .session-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: var(--radius);
-      background: rgba(124,58,237,0.12);
-      border: 1px solid rgba(124,58,237,0.35);
-      font-size: 13px;
-      font-weight: 600;
-      color: #a78bfa;
-      margin-bottom: 6px;
-    }
-    .session-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #a78bfa;
-      flex-shrink: 0;
-      animation: session-pulse 2s ease-out infinite;
-    }
+    .session-badge { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-radius: var(--radius); background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.35); font-size: 13px; font-weight: 600;
+      color: #a78bfa; margin-bottom: 6px; }
+    .session-dot { width: 8px; height: 8px; border-radius: 50%; background: #a78bfa; flex-shrink: 0;
+      animation: session-pulse 2s ease-out infinite; }
     @keyframes session-pulse {
       0%  { box-shadow: 0 0 0 0 rgba(167,139,250,0.6); }
       70% { box-shadow: 0 0 0 6px rgba(167,139,250,0); }
       100%{ box-shadow: 0 0 0 0 rgba(167,139,250,0); }
     }
+
+    /* ── Sessions tab ── */
+    .sessions-list { display: flex; flex-direction: column; gap: 8px; }
+    .session-row { background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10; }
+    .session-row.active { border-color: rgba(124,58,237,0.4); }
+    .session-info { min-width: 0; }
+    .session-label { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .session-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .badge-active { font-size: 10px; padding: 2px 7px; border-radius: 20px;
+      background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.35);
+      font-weight: 700; }
+    .session-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Status message ── */
+    .status-message { min-height: 18px; font-size: 12px; border-radius: 4px; padding: 4px 8px; text-align: center; }
+    .status-message.success { color: var(--success); }
+    .status-message.error   { color: var(--error); }
+    .loading-hint { font-size: 12px; color: var(--muted); }
+
+    .empty-hint { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+    .section-actions { display: flex; gap: 8px; margin-bottom: 14px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Karafun Bridge Settings</h1>
-      <p>Select your community and queue mode.</p>
-    </header>
 
-    <div class="form-body">
-      <!-- Live connection status -->
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="settings">⚙ Settings</button>
+      <button class="tab-btn" data-tab="sessions">📋 Sessions</button>
+    </div>
+
+    <!-- ── SETTINGS TAB ────────────────────────────────── -->
+    <div class="tab-panel active" id="tab-settings">
+
       <div class="field">
         <label>Supabase Status</label>
         <span class="connection-badge" id="supabaseBadge">
@@ -275,7 +158,6 @@
         <span class="loading-hint" id="supabaseErrorHint" style="color:var(--error);display:none;"></span>
       </div>
 
-      <!-- Community -->
       <div class="field">
         <label for="communitySelect">Your Community</label>
         <select id="communitySelect" disabled>
@@ -284,7 +166,6 @@
         <span class="loading-hint" id="loadingHint"></span>
       </div>
 
-      <!-- Mode -->
       <div class="field">
         <label>Queue Mode</label>
         <div class="mode-toggle">
@@ -292,27 +173,21 @@
           <button id="modeAuto" type="button">Auto-Queue</button>
         </div>
         <span class="field-hint">
-          <strong>Confirm:</strong> new songs wait for your approval in the Queue Manager.<br/>
-          <strong>Auto:</strong> songs are added to Karafun immediately.
+          <strong>Confirm:</strong> songs wait for approval in Queue Manager.<br/>
+          <strong>Auto:</strong> songs go straight to KaraFun.
         </span>
       </div>
 
-      <!-- Session management -->
       <div class="field" id="sessionSection">
         <label>Tonight's Session</label>
-
-        <!-- Idle state -->
         <div id="sessionIdle">
           <p class="field-hint" style="margin-bottom:8px">
-            Starting a session lets singers at this venue submit songs directly to you.
-            Multiple KJs can run separate sessions for the same community simultaneously.
+            Start a session so singers at this venue can submit songs directly to you.
           </p>
           <input class="session-input" id="hostNameInput" type="text" placeholder="Your name / KJ handle" />
           <input class="session-input" id="venueInput"    type="text" placeholder="Venue (e.g. The Rustic)" />
           <button class="btn-session" id="startSessionBtn" type="button" disabled>▶ Start Session</button>
         </div>
-
-        <!-- Active state -->
         <div id="sessionActive" style="display:none">
           <div class="session-badge">
             <span class="session-dot"></span>
@@ -322,147 +197,119 @@
           <button class="btn-end-session" id="endSessionBtn" type="button">■ End Session</button>
         </div>
       </div>
-    </div>
 
-    <footer>
       <div class="status-message" id="statusMsg"></div>
       <button class="btn-save" id="saveBtn" type="button" disabled>Save Settings</button>
-    </footer>
-  </div>
+
+    </div><!-- /tab-settings -->
+
+    <!-- ── SESSIONS TAB ─────────────────────────────────── -->
+    <div class="tab-panel" id="tab-sessions">
+
+      <div class="section-actions">
+        <button class="btn btn-primary" id="refreshSessionsBtn" type="button">↺ Refresh</button>
+      </div>
+
+      <div id="sessionsContent">
+        <p class="empty-hint">Loading…</p>
+      </div>
+
+    </div><!-- /tab-sessions -->
+
+  </div><!-- /container -->
 
   <script>
     const $ = (id) => document.getElementById(id);
     let selectedMode = 'confirm';
 
-    // ── Live Supabase status ─────────────────────────────────────────────────
+    // ── Tab switching ────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        $('tab-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'sessions') loadSessions();
+      });
+    });
+
+    // ── Supabase status ──────────────────────────────────
     function updateSupabaseStatus(s) {
-      const badge   = $('supabaseBadge');
-      const text    = $('supabaseStatusText');
-      const errHint = $('supabaseErrorHint');
-      if (!s || !s.supabaseStatus) {
-        badge.className = 'connection-badge';
-        text.textContent = 'Not started';
-        errHint.style.display = 'none';
-        return;
-      }
+      const badge = $('supabaseBadge'), text = $('supabaseStatusText'), errHint = $('supabaseErrorHint');
+      if (!s || !s.supabaseStatus) { badge.className = 'connection-badge'; text.textContent = 'Not started'; errHint.style.display = 'none'; return; }
       const raw = s.supabaseStatus;
       if (raw === 'SUBSCRIBED') {
-        badge.className = 'connection-badge connected';
-        text.textContent = '✓ Connected';
-        errHint.style.display = 'none';
+        badge.className = 'connection-badge connected'; text.textContent = '✓ Connected'; errHint.style.display = 'none';
       } else if (raw === 'CHANNEL_ERROR') {
-        badge.className = 'connection-badge error';
-        text.textContent = 'Channel Error';
-        if (s.supabaseError) { errHint.textContent = s.supabaseError; errHint.style.display = ''; }
-        else { errHint.style.display = 'none'; }
+        badge.className = 'connection-badge error'; text.textContent = 'Channel Error';
+        if (s.supabaseError) { errHint.textContent = s.supabaseError; errHint.style.display = ''; } else errHint.style.display = 'none';
       } else if (raw === 'TIMED_OUT') {
-        badge.className = 'connection-badge error';
-        text.textContent = 'Timed Out';
-        errHint.style.display = 'none';
+        badge.className = 'connection-badge error'; text.textContent = 'Timed Out'; errHint.style.display = 'none';
       } else {
-        badge.className = 'connection-badge connecting';
-        text.textContent = raw;
-        errHint.style.display = 'none';
+        badge.className = 'connection-badge connecting'; text.textContent = raw; errHint.style.display = 'none';
       }
     }
-
-    // Listen for status broadcasts from main process
     if (window.bridge && window.bridge.onStatusUpdated) {
-      window.bridge.onStatusUpdated((s) => updateSupabaseStatus(s));
+      window.bridge.onStatusUpdated((s) => { updateSupabaseStatus(s); renderSession(s); });
     }
 
-    // ── Auto-load communities on open ────────────────────────────────────────
+    // ── Communities ──────────────────────────────────────
     async function loadCommunities() {
       $('loadingHint').textContent = 'Loading communities…';
       const result = await window.bridge.getCommunities();
-
-      if (!result.ok) {
-        $('loadingHint').textContent = 'Could not load communities: ' + result.error;
-        return;
-      }
-
+      if (!result.ok) { $('loadingHint').textContent = 'Could not load: ' + result.error; return; }
       const select = $('communitySelect');
       select.innerHTML = '<option value="">— select your community —</option>';
-      result.communities.forEach((c) => {
+      result.communities.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
+        opt.value = c.id; opt.textContent = c.name;
         select.appendChild(opt);
       });
-      select.disabled = false;
-      $('saveBtn').disabled = false;
-      $('loadingHint').textContent = '';
-
-      // Re-select previously saved community
+      select.disabled = false; $('saveBtn').disabled = false; $('loadingHint').textContent = '';
       const s = await window.bridge.getSettings();
-      selectedMode = s.mode || 'confirm';
-      updateModeButtons();
-
+      selectedMode = s.mode || 'confirm'; updateModeButtons();
       if (s.communityId) {
         select.value = s.communityId;
-        // Programmatic assignment doesn't fire 'change', so manually enable
-        // the Start Session button now that a community is selected.
         $('startSessionBtn').disabled = _sessionActive || !select.value;
       }
     }
-
     loadCommunities();
 
-    // ── Mode toggle ──────────────────────────────────────────────────────────
+    // ── Mode toggle ──────────────────────────────────────
     function updateModeButtons() {
       $('modeConfirm').className = selectedMode === 'confirm' ? 'active' : '';
-      $('modeAuto').className = selectedMode === 'auto' ? 'active' : '';
+      $('modeAuto').className    = selectedMode === 'auto'    ? 'active' : '';
     }
-
     $('modeConfirm').addEventListener('click', () => { selectedMode = 'confirm'; updateModeButtons(); });
-    $('modeAuto').addEventListener('click', () => { selectedMode = 'auto'; updateModeButtons(); });
+    $('modeAuto').addEventListener('click',    () => { selectedMode = 'auto';    updateModeButtons(); });
 
-    // ── Session management ───────────────────────────────────────────────────
+    // ── Session management (Settings tab) ────────────────
     let _sessionActive = false;
-
     function renderSession(s) {
       _sessionActive = !!(s && s.sessionId);
-      $('sessionIdle').style.display  = _sessionActive ? 'none' : '';
+      $('sessionIdle').style.display   = _sessionActive ? 'none' : '';
       $('sessionActive').style.display = _sessionActive ? ''     : 'none';
-
       if (_sessionActive) {
         const parts = [];
-        if (s.sessionHostName) parts.push(`KJ: ${s.sessionHostName}`);
-        if (s.sessionVenue)    parts.push(`@ ${s.sessionVenue}`);
+        if (s.sessionHostName) parts.push('KJ: ' + s.sessionHostName);
+        if (s.sessionVenue)    parts.push('@ ' + s.sessionVenue);
         if (s.sessionStarted) {
           const d = new Date(s.sessionStarted);
-          parts.push(`started ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+          parts.push('started ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         }
         $('sessionBadgeText').textContent = parts.length ? parts.join(' · ') : 'Session active';
         $('sessionMeta').textContent = 'Singers can now submit songs directly to this session.';
       }
-
-      // Enable Start button only if community is saved.
-      // Don't disable if communitySelect is empty — that just means communities
-      // are still loading; the loadCommunities() callback will re-enable once done.
-      if ($('communitySelect').value) {
-        $('startSessionBtn').disabled = _sessionActive;
-      }
+      if ($('communitySelect').value) $('startSessionBtn').disabled = _sessionActive;
     }
 
-    // Populate session state on load
     window.addEventListener('DOMContentLoaded', async () => {
       if (window.bridge && window.bridge.getStatus) {
         const s = await window.bridge.getStatus();
-        updateSupabaseStatus(s);
-        renderSession(s);
+        updateSupabaseStatus(s); renderSession(s);
       }
     });
 
-    // Keep session UI in sync with live status updates
-    if (window.bridge && window.bridge.onStatusUpdated) {
-      window.bridge.onStatusUpdated((s) => {
-        updateSupabaseStatus(s);
-        renderSession(s);
-      });
-    }
-
-    // Enable Start Session once a community is selected
     $('communitySelect').addEventListener('change', () => {
       $('startSessionBtn').disabled = _sessionActive || !$('communitySelect').value;
     });
@@ -472,60 +319,131 @@
       const venue    = $('venueInput').value.trim();
       $('startSessionBtn').disabled = true;
       $('startSessionBtn').textContent = 'Starting…';
-
       const result = await window.bridge.startSession({ hostName, venue });
-
       $('startSessionBtn').textContent = '▶ Start Session';
       if (result && result.ok) {
-        showStatus('✓ Session started! Singers can now request songs.', 'success');
+        showStatus('✓ Session started!', 'success');
       } else {
         $('startSessionBtn').disabled = false;
-        showStatus('Error: ' + (result ? result.error : 'Unknown error'), 'error');
+        showStatus('Error: ' + (result ? result.error : 'Unknown'), 'error');
       }
     });
 
     $('endSessionBtn').addEventListener('click', async () => {
-      const confirmed = confirm('End this session? Pending submissions will be cancelled.');
-      if (!confirmed) return;
-      $('endSessionBtn').disabled = true;
-      $('endSessionBtn').textContent = 'Ending…';
+      if (!confirm('End this session? Pending submissions will be cancelled.')) return;
+      $('endSessionBtn').disabled = true; $('endSessionBtn').textContent = 'Ending…';
       const result = await window.bridge.endSession();
-      $('endSessionBtn').disabled = false;
-      $('endSessionBtn').textContent = '■ End Session';
-      if (!result || !result.ok) {
-        showStatus('Error ending session: ' + (result ? result.error : 'Unknown'), 'error');
-      }
+      $('endSessionBtn').disabled = false; $('endSessionBtn').textContent = '■ End Session';
+      if (!result || !result.ok) showStatus('Error: ' + (result ? result.error : 'Unknown'), 'error');
     });
 
-    // ── Save ─────────────────────────────────────────────────────────────────
     $('saveBtn').addEventListener('click', async () => {
       const communityId = $('communitySelect').value;
-
-      if (!communityId) {
-        showStatus('Please select a community.', 'error');
-        return;
-      }
-
-      $('saveBtn').disabled = true;
-      $('saveBtn').textContent = 'Saving…';
-
+      if (!communityId) { showStatus('Please select a community.', 'error'); return; }
+      $('saveBtn').disabled = true; $('saveBtn').textContent = 'Saving…';
       const result = await window.bridge.saveSettings({ communityId, mode: selectedMode });
-
-      $('saveBtn').disabled = false;
-      $('saveBtn').textContent = 'Save Settings';
-
-      if (result && result.ok) {
-        showStatus('✓ Settings saved!', 'success');
-      } else {
-        showStatus('Error: ' + (result ? result.error : 'Unknown error'), 'error');
-      }
+      $('saveBtn').disabled = false; $('saveBtn').textContent = 'Save Settings';
+      if (result && result.ok) showStatus('✓ Settings saved!', 'success');
+      else showStatus('Error: ' + (result ? result.error : 'Unknown'), 'error');
     });
 
     function showStatus(msg, type) {
       const el = $('statusMsg');
-      el.textContent = msg;
-      el.className = 'status-message ' + type;
+      el.textContent = msg; el.className = 'status-message ' + type;
       setTimeout(() => { el.textContent = ''; el.className = 'status-message'; }, 5000);
+    }
+
+    // ── Sessions tab ─────────────────────────────────────
+    let _confirmingId = null;
+
+    async function loadSessions() {
+      const content = $('sessionsContent');
+      content.innerHTML = '<p class="empty-hint">Loading…</p>';
+      _confirmingId = null;
+      const result = await window.bridge.listSessions();
+      if (!result.ok || result.sessions.length === 0) {
+        content.innerHTML = '<p class="empty-hint">' + (result.ok ? 'No sessions found.' : 'Error: ' + result.error) + '</p>';
+        return;
+      }
+      renderSessions(result.sessions);
+    }
+
+    function renderSessions(sessions) {
+      const content = $('sessionsContent');
+      content.innerHTML = '';
+      const list = document.createElement('div');
+      list.className = 'sessions-list';
+
+      sessions.forEach(s => {
+        const isActive = s.status === 'active';
+        const started  = s.started_at ? new Date(s.started_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        const ended    = s.ended_at   ? new Date(s.ended_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : null;
+        const label    = [s.host_name, s.venue ? '@ ' + s.venue : null].filter(Boolean).join(' ') || 'Unnamed session';
+
+        const row = document.createElement('div');
+        row.className = 'session-row' + (isActive ? ' active' : '');
+        row.dataset.id = s.id;
+
+        row.innerHTML = `
+          <div class="session-info">
+            <div class="session-label">
+              ${isActive ? '<span class="badge-active">ACTIVE</span>' : ''}
+              ${escHtml(label)}
+            </div>
+            <div class="session-meta">
+              Started ${escHtml(started)}${ended ? ' · Ended ' + escHtml(ended) : ''}
+            </div>
+          </div>
+          <div class="session-actions" id="actions-${s.id}"></div>
+        `;
+        list.appendChild(row);
+        renderSessionActions(s.id, isActive);
+      });
+
+      content.appendChild(list);
+    }
+
+    function renderSessionActions(id, isActive) {
+      const el = $('actions-' + id);
+      if (!el) return;
+      el.innerHTML = '';
+      if (_confirmingId === id) {
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn btn-danger';
+        confirmBtn.textContent = isActive ? 'Confirm End' : 'Confirm Delete';
+        confirmBtn.addEventListener('click', async () => {
+          confirmBtn.disabled = true; confirmBtn.textContent = '…';
+          if (isActive) await window.bridge.endSessionById(id);
+          else          await window.bridge.deleteSessionById(id);
+          _confirmingId = null;
+          loadSessions();
+        });
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-ghost';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.marginLeft = '6px';
+        cancelBtn.addEventListener('click', () => { _confirmingId = null; loadSessions(); });
+        el.appendChild(confirmBtn);
+        el.appendChild(cancelBtn);
+      } else if (isActive) {
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn btn-ghost';
+        endBtn.textContent = 'End';
+        endBtn.addEventListener('click', () => { _confirmingId = id; loadSessions(); });
+        el.appendChild(endBtn);
+      } else {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-danger';
+        delBtn.textContent = '🗑 Delete';
+        delBtn.addEventListener('click', () => { _confirmingId = id; loadSessions(); });
+        el.appendChild(delBtn);
+      }
+    }
+
+    $('refreshSessionsBtn').addEventListener('click', loadSessions);
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
   </script>
 </body>
