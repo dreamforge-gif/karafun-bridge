@@ -26,10 +26,15 @@ let queueWin = null;
 
 const state = {
   supabaseConnected: false,
+  supabaseStatus: null,     // raw realtime status string for diagnostics
+  supabaseError: null,      // realtime error if any
   karafunConnected: false,
   mode: 'confirm',          // 'confirm' | 'auto'
   communityId: null,
   pendingSongs: [],         // songs waiting for manual confirmation
+  sessionId: null,          // active karaoke session UUID, or null
+  sessionStarted: null,     // ISO timestamp when session started
+  sessionHostName: null,    // host name entered when starting session
 };
 
 // Lazily-required after settings load so we can pass the anon key
@@ -235,9 +240,14 @@ function broadcastSongs() {
 function broadcastStatus() {
   const status = {
     supabaseConnected: state.supabaseConnected,
+    supabaseStatus: state.supabaseStatus,
+    supabaseError: state.supabaseError,
     karafunConnected: state.karafunConnected,
     mode: state.mode,
     communityId: state.communityId,
+    sessionId: state.sessionId,
+    sessionStarted: state.sessionStarted,
+    sessionHostName: state.sessionHostName,
   };
   const windows = BrowserWindow.getAllWindows();
   windows.forEach((w) => {
@@ -297,17 +307,21 @@ async function skipSong(songId) {
 }
 
 // ─── Supabase initialisation ──────────────────────────────────────────────────
-function initSupabase(anonKey, communityId) {
-  supabase = require('./supabase-client');
-  supabase.init(anonKey);
+function initSupabase(communityId) {
+  if (!supabase) {
+    supabase = require('./supabase-client');
+    supabase.init();
+  }
   state.communityId = communityId;
 
   supabase.subscribeToQueue(
     communityId,
     (row) => handleNewSong(row),
-    (status) => {
-      console.log('Supabase realtime status:', status);
+    (status, err) => {
+      console.log('Supabase realtime status:', status, err || '');
       state.supabaseConnected = status === 'SUBSCRIBED';
+      state.supabaseStatus = status;
+      state.supabaseError = err ? String(err) : null;
       refreshTray();
       broadcastStatus();
     }
@@ -316,7 +330,7 @@ function initSupabase(anonKey, communityId) {
 
 // ─── Karafun initialisation ───────────────────────────────────────────────────
 function initKarafun() {
-  karafun = require('./karafun');
+  karafun = require('./karafun-db');
 
   karafun.on('connected', () => {
     console.log('Karafun connected');
@@ -347,10 +361,64 @@ ipcMain.handle('get-songs', () => state.pendingSongs);
 
 ipcMain.handle('get-status', () => ({
   supabaseConnected: state.supabaseConnected,
+  supabaseStatus: state.supabaseStatus,
+  supabaseError: state.supabaseError,
   karafunConnected: state.karafunConnected,
   mode: state.mode,
   communityId: state.communityId,
+  sessionId: state.sessionId,
+  sessionStarted: state.sessionStarted,
+  sessionHostName: state.sessionHostName,
 }));
+
+ipcMain.handle('start-session', async (_event, hostName) => {
+  try {
+    const session = await supabase.createSession(state.communityId, hostName);
+    state.sessionId = session.id;
+    state.sessionStarted = session.started_at;
+    state.sessionHostName = hostName || null;
+    broadcastStatus();
+    refreshTray();
+    return { ok: true, sessionId: session.id };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('end-session', async () => {
+  if (!state.sessionId) return { ok: true };
+  try {
+    // Cancel any remaining submitted songs for this session
+    await supabase.cancelSessionSongs(state.sessionId);
+    await supabase.endSession(state.sessionId);
+    state.sessionId = null;
+    state.sessionStarted = null;
+    state.sessionHostName = null;
+    // Clear pending songs from this session
+    state.pendingSongs = [];
+    broadcastSongs();
+    broadcastStatus();
+    refreshTray();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('delete-song', async (_event, songId) => {
+  const idx = state.pendingSongs.findIndex((s) => s.id === songId);
+  if (idx !== -1) {
+    state.pendingSongs.splice(idx, 1);
+    broadcastSongs();
+    refreshTray();
+  }
+  try {
+    await supabase.deleteSong(songId);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
 
 ipcMain.handle('add-song', async (_event, songId) => {
   const row = state.pendingSongs.find((s) => s.id === songId);
@@ -389,16 +457,18 @@ ipcMain.handle('skip-song', async (_event, songId) => {
 ipcMain.handle('get-settings', () => {
   const config = loadConfig();
   return {
-    // Never return the raw anon key to the renderer — just indicate if set
-    hasAnonKey: !!config.anonKey,
     communityId: config.communityId || null,
     mode: config.mode || 'confirm',
   };
 });
 
 ipcMain.handle('get-communities', async () => {
-  if (!supabase) return { ok: false, error: 'Supabase not initialised yet' };
   try {
+    // Ensure Supabase is initialised (key is baked in)
+    if (!supabase) {
+      supabase = require('./supabase-client');
+      supabase.init();
+    }
     const communities = await supabase.getCommunities();
     return { ok: true, communities };
   } catch (err) {
@@ -407,27 +477,25 @@ ipcMain.handle('get-communities', async () => {
 });
 
 ipcMain.handle('save-settings', async (_event, settings) => {
-  const { anonKey, communityId, mode } = settings;
+  const { communityId, mode } = settings;
 
-  if (!anonKey || !communityId) {
-    return { ok: false, error: 'Anon key and community ID are required' };
+  if (!communityId) {
+    return { ok: false, error: 'Please select a community.' };
   }
 
   try {
     const existing = loadConfig();
     saveConfig({
       ...existing,
-      anonKey,
       communityId,
       mode: mode || 'confirm',
     });
 
-    // Re-initialise with new credentials
     if (supabase) supabase.unsubscribe();
     state.mode = mode || 'confirm';
     state.pendingSongs = [];
 
-    initSupabase(anonKey, communityId);
+    initSupabase(communityId);
     refreshTray();
     broadcastStatus();
     broadcastSongs();
@@ -456,18 +524,18 @@ app.on('ready', () => {
   const config = loadConfig();
   state.mode = config.mode || 'confirm';
 
-  // Start Karafun WS regardless of Supabase config
+  // Start Karafun WS regardless of community config
   initKarafun();
 
-  // Only start Supabase if credentials are already saved
-  if (config.anonKey && config.communityId) {
+  // Supabase key is baked in — always init, then subscribe if community is saved
+  if (config.communityId) {
     try {
-      initSupabase(config.anonKey, config.communityId);
+      initSupabase(config.communityId);
     } catch (err) {
       console.error('Failed to init Supabase on startup:', err);
     }
   } else {
-    // First run — open settings immediately
+    // First run — no community selected yet, open settings
     setTimeout(openSettingsWindow, 500);
   }
 

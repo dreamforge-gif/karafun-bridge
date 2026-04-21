@@ -36,11 +36,10 @@
       flex-direction: column;
       height: 100%;
       padding: 24px;
-      gap: 0;
     }
 
     header {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
 
     header h1 {
@@ -59,7 +58,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 24px;
     }
 
     .field {
@@ -76,8 +75,6 @@
       color: var(--muted);
     }
 
-    input[type="text"],
-    input[type="password"],
     select {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -90,9 +87,8 @@
       transition: border-color 0.15s;
     }
 
-    input:focus, select:focus {
-      border-color: var(--brand);
-    }
+    select:focus { border-color: var(--brand); }
+    select:disabled { opacity: 0.5; }
 
     select option {
       background: var(--surface);
@@ -167,68 +163,54 @@
     .status-message.success { color: var(--success); }
     .status-message.error   { color: var(--error); }
 
-    .key-status {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .key-status.set { color: var(--success); }
-
-    .community-loading {
-      color: var(--muted);
+    .loading-hint {
       font-size: 12px;
-      padding: 4px 0;
+      color: var(--muted);
     }
 
-    .load-communities-btn {
-      background: none;
+    .connection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 8px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 4px;
-      transition: border-color 0.15s;
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
     }
-    .load-communities-btn:hover { border-color: var(--brand); }
+    .connection-badge.connected  { color: var(--success); border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.08); }
+    .connection-badge.error      { color: var(--error);   border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.08); }
+    .connection-badge.connecting { color: #f59e0b;        border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.08); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Karafun Bridge Settings</h1>
-      <p>Connect to your Supabase project and select your community.</p>
+      <p>Select your community and queue mode.</p>
     </header>
 
     <div class="form-body">
-      <!-- Anon Key -->
+      <!-- Live connection status -->
       <div class="field">
-        <label for="anonKey">Supabase Anon Key</label>
-        <input
-          type="password"
-          id="anonKey"
-          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <span class="key-status" id="keyStatus"></span>
-        <span class="field-hint">
-          Found in your Supabase project → Settings → API → anon public key
+        <label>Supabase Status</label>
+        <span class="connection-badge" id="supabaseBadge">
+          <span class="status-dot"></span>
+          <span id="supabaseStatusText">Waiting…</span>
         </span>
+        <span class="loading-hint" id="supabaseErrorHint" style="color:var(--error);display:none;"></span>
       </div>
 
-      <!-- Load Communities -->
+      <!-- Community -->
       <div class="field">
-        <label for="communitySelect">Community</label>
-        <select id="communitySelect">
-          <option value="">— enter key above, then load —</option>
+        <label for="communitySelect">Your Community</label>
+        <select id="communitySelect" disabled>
+          <option value="">Loading communities…</option>
         </select>
-        <button class="load-communities-btn" id="loadCommunitiesBtn" type="button">
-          Load Communities
-        </button>
-        <span class="community-loading" id="communityLoading"></span>
+        <span class="loading-hint" id="loadingHint"></span>
       </div>
 
       <!-- Mode -->
@@ -247,29 +229,92 @@
 
     <footer>
       <div class="status-message" id="statusMsg"></div>
-      <button class="btn-save" id="saveBtn" type="button">Save Settings</button>
+      <button class="btn-save" id="saveBtn" type="button" disabled>Save Settings</button>
     </footer>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     let selectedMode = 'confirm';
-    let communitiesLoaded = false;
 
-    // ── On load: populate current settings ──────────────────────────────────
-    window.bridge.getSettings().then((s) => {
-      if (s.hasAnonKey) {
-        $('keyStatus').textContent = 'Key saved (enter a new one to change)';
-        $('keyStatus').className = 'key-status set';
+    // ── Live Supabase status ─────────────────────────────────────────────────
+    function updateSupabaseStatus(s) {
+      const badge   = $('supabaseBadge');
+      const text    = $('supabaseStatusText');
+      const errHint = $('supabaseErrorHint');
+      if (!s || !s.supabaseStatus) {
+        badge.className = 'connection-badge';
+        text.textContent = 'Not started';
+        errHint.style.display = 'none';
+        return;
       }
+      const raw = s.supabaseStatus;
+      if (raw === 'SUBSCRIBED') {
+        badge.className = 'connection-badge connected';
+        text.textContent = '✓ Connected';
+        errHint.style.display = 'none';
+      } else if (raw === 'CHANNEL_ERROR') {
+        badge.className = 'connection-badge error';
+        text.textContent = 'Channel Error';
+        if (s.supabaseError) { errHint.textContent = s.supabaseError; errHint.style.display = ''; }
+        else { errHint.style.display = 'none'; }
+      } else if (raw === 'TIMED_OUT') {
+        badge.className = 'connection-badge error';
+        text.textContent = 'Timed Out';
+        errHint.style.display = 'none';
+      } else {
+        badge.className = 'connection-badge connecting';
+        text.textContent = raw;
+        errHint.style.display = 'none';
+      }
+    }
+
+    // Listen for status broadcasts from main process
+    if (window.bridge && window.bridge.onStatusUpdated) {
+      window.bridge.onStatusUpdated((s) => updateSupabaseStatus(s));
+    }
+
+    // Also pull current status on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (window.bridge && window.bridge.getStatus) {
+        const s = await window.bridge.getStatus();
+        updateSupabaseStatus(s);
+      }
+    });
+
+    // ── Auto-load communities on open ────────────────────────────────────────
+    async function loadCommunities() {
+      $('loadingHint').textContent = 'Loading communities…';
+      const result = await window.bridge.getCommunities();
+
+      if (!result.ok) {
+        $('loadingHint').textContent = 'Could not load communities: ' + result.error;
+        return;
+      }
+
+      const select = $('communitySelect');
+      select.innerHTML = '<option value="">— select your community —</option>';
+      result.communities.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+      select.disabled = false;
+      $('saveBtn').disabled = false;
+      $('loadingHint').textContent = '';
+
+      // Re-select previously saved community
+      const s = await window.bridge.getSettings();
       selectedMode = s.mode || 'confirm';
       updateModeButtons();
 
       if (s.communityId) {
-        // Pre-select after loading communities
-        $('communityLoading').textContent = 'Previous community ID: ' + s.communityId;
+        select.value = s.communityId;
       }
-    });
+    }
+
+    loadCommunities();
 
     // ── Mode toggle ──────────────────────────────────────────────────────────
     function updateModeButtons() {
@@ -277,92 +322,28 @@
       $('modeAuto').className = selectedMode === 'auto' ? 'active' : '';
     }
 
-    $('modeConfirm').addEventListener('click', () => {
-      selectedMode = 'confirm';
-      updateModeButtons();
-    });
-
-    $('modeAuto').addEventListener('click', () => {
-      selectedMode = 'auto';
-      updateModeButtons();
-    });
-
-    // ── Load communities ─────────────────────────────────────────────────────
-    $('loadCommunitiesBtn').addEventListener('click', async () => {
-      const key = $('anonKey').value.trim();
-      if (!key) {
-        showStatus('Enter your Supabase anon key first.', 'error');
-        return;
-      }
-
-      $('loadCommunitiesBtn').disabled = true;
-      $('communityLoading').textContent = 'Loading…';
-
-      // Temporarily save the key so main can init Supabase
-      const tempResult = await window.bridge.saveSettings({
-        anonKey: key,
-        communityId: '__temp__',
-        mode: selectedMode,
-      });
-
-      const result = await window.bridge.getCommunities();
-      $('loadCommunitiesBtn').disabled = false;
-      $('communityLoading').textContent = '';
-
-      if (!result.ok) {
-        showStatus('Could not load communities: ' + result.error, 'error');
-        return;
-      }
-
-      const select = $('communitySelect');
-      select.innerHTML = '<option value="">— select a community —</option>';
-      result.communities.forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        select.appendChild(opt);
-      });
-      communitiesLoaded = true;
-
-      // Re-select previously saved community
-      window.bridge.getSettings().then((s) => {
-        if (s.communityId && s.communityId !== '__temp__') {
-          select.value = s.communityId;
-        }
-      });
-    });
+    $('modeConfirm').addEventListener('click', () => { selectedMode = 'confirm'; updateModeButtons(); });
+    $('modeAuto').addEventListener('click', () => { selectedMode = 'auto'; updateModeButtons(); });
 
     // ── Save ─────────────────────────────────────────────────────────────────
     $('saveBtn').addEventListener('click', async () => {
-      const key = $('anonKey').value.trim();
       const communityId = $('communitySelect').value;
 
-      if (!key) {
-        showStatus('Supabase anon key is required.', 'error');
-        return;
-      }
-      if (!communityId || communityId === '__temp__') {
-        showStatus('Please select a community (click Load Communities first).', 'error');
+      if (!communityId) {
+        showStatus('Please select a community.', 'error');
         return;
       }
 
       $('saveBtn').disabled = true;
       $('saveBtn').textContent = 'Saving…';
 
-      const result = await window.bridge.saveSettings({
-        anonKey: key,
-        communityId,
-        mode: selectedMode,
-      });
+      const result = await window.bridge.saveSettings({ communityId, mode: selectedMode });
 
       $('saveBtn').disabled = false;
       $('saveBtn').textContent = 'Save Settings';
 
       if (result && result.ok) {
-        showStatus('Settings saved! Supabase subscription started.', 'success');
-        $('keyStatus').textContent = 'Key saved';
-        $('keyStatus').className = 'key-status set';
-        $('anonKey').value = '';
+        showStatus('✓ Settings saved!', 'success');
       } else {
         showStatus('Error: ' + (result ? result.error : 'Unknown error'), 'error');
       }
@@ -372,10 +353,7 @@
       const el = $('statusMsg');
       el.textContent = msg;
       el.className = 'status-message ' + type;
-      setTimeout(() => {
-        el.textContent = '';
-        el.className = 'status-message';
-      }, 5000);
+      setTimeout(() => { el.textContent = ''; el.className = 'status-message'; }, 5000);
     }
   </script>
 </body>
