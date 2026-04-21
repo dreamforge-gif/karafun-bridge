@@ -157,14 +157,14 @@ async function cancelSessionSongs(sessionId) {
 
 async function createSession(communityId, hostName, venue) {
   const client = getClient();
+  // Only include optional columns when they have a value — avoids schema
+  // cache errors if the column was added after the table was first created.
+  const row = { community_id: communityId, status: 'active' };
+  if (hostName) row.host_name = hostName;
+  if (venue)    row.venue     = venue;
   const { data, error } = await client
     .from('karaoke_sessions')
-    .insert({
-      community_id: communityId,
-      host_name:    hostName || null,
-      venue:        venue    || null,
-      status:       'active',
-    })
+    .insert(row)
     .select()
     .single();
   if (error) throw error;

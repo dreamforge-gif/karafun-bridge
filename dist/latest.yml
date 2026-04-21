@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: karafun-bridge-win.exe
-    sha512: 2J/9B8NYSdJjWxrpUNdvWSoFb5ytGUvp9Cdg5zYGNllGlJQxvWj/Js3342+/Bvt3XdlDwjMv15jHX48hDIpO8w==
-    size: 80504211
+    sha512: t9tDGOgpTv36lGl3k/Mwat4sB8kfK+jm/1cjTJU8B6n46iZZN04rObH9bqkhNg8U3bWYO960kdKqTZlsgjfDGA==
+    size: 80504331
 path: karafun-bridge-win.exe
-sha512: 2J/9B8NYSdJjWxrpUNdvWSoFb5ytGUvp9Cdg5zYGNllGlJQxvWj/Js3342+/Bvt3XdlDwjMv15jHX48hDIpO8w==
-releaseDate: '2026-04-21T01:28:23.126Z'
+sha512: t9tDGOgpTv36lGl3k/Mwat4sB8kfK+jm/1cjTJU8B6n46iZZN04rObH9bqkhNg8U3bWYO960kdKqTZlsgjfDGA==
+releaseDate: '2026-04-21T01:33:41.924Z'

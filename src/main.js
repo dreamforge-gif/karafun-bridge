@@ -376,7 +376,10 @@ ipcMain.handle('get-status', () => ({
   sessionVenue: state.sessionVenue,
 }));
 
-ipcMain.handle('start-session', async (_event, { hostName, venue } = {}) => {
+ipcMain.handle('start-session', async (_event, arg) => {
+  // Support both old string API (queue.html) and new object API (settings.html)
+  const hostName = typeof arg === 'string' ? arg : (arg?.hostName || null);
+  const venue    = typeof arg === 'object' && arg ? (arg.venue || null) : null;
   try {
     if (!state.communityId) return { ok: false, error: 'No community selected.' };
     const session = await supabase.createSession(state.communityId, hostName, venue);
