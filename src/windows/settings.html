@@ -400,6 +400,9 @@
 
       if (s.communityId) {
         select.value = s.communityId;
+        // Programmatic assignment doesn't fire 'change', so manually enable
+        // the Start Session button now that a community is selected.
+        $('startSessionBtn').disabled = _sessionActive || !select.value;
       }
     }
 
@@ -434,8 +437,12 @@
         $('sessionMeta').textContent = 'Singers can now submit songs directly to this session.';
       }
 
-      // Enable Start button only if community is saved
-      $('startSessionBtn').disabled = _sessionActive || !$('communitySelect').value;
+      // Enable Start button only if community is saved.
+      // Don't disable if communitySelect is empty — that just means communities
+      // are still loading; the loadCommunities() callback will re-enable once done.
+      if ($('communitySelect').value) {
+        $('startSessionBtn').disabled = _sessionActive;
+      }
     }
 
     // Populate session state on load
