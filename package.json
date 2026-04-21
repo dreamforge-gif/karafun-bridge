@@ -1,6 +1,6 @@
 {
   "name": "karafun-bridge",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Bridges The Regular App song queue to Karafun karaoke software",
   "main": "src/main.js",
   "scripts": {
@@ -44,10 +44,15 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.png",
-      "artifactName": "karafun-bridge-${version}-win.exe",
       "signingHashAlgorithms": null,
       "sign": null
     },
@@ -55,7 +60,11 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": false,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "karafun-bridge-${version}-setup.exe"
+    },
+    "portable": {
+      "artifactName": "karafun-bridge-${version}-portable.exe"
     },
     "mac": {
       "target": [

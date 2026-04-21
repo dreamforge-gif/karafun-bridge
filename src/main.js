@@ -263,16 +263,28 @@ function broadcastStatus() {
 async function handleNewSong(row) {
   console.log('New song received:', row.singer_name, '-', row.song_title);
 
-  if (state.mode === 'auto') {
+  // Auto mode: attempt to queue directly into KaraFun only when we can.
+  // If KaraFun isn't connected OR the song has no karafun_song_id, fall back
+  // to the pending-songs list so nothing is silently lost.
+  if (state.mode === 'auto' && karafun && karafun.isConnected && row.karafun_song_id) {
     await queueSong(row);
-  } else {
-    // Confirm mode: add to pending list
-    if (!state.pendingSongs.find((s) => s.id === row.id)) {
-      state.pendingSongs.push(row);
-      broadcastSongs();
-      refreshTray();
-      // Open the queue window to alert the KJ
-      openQueueWindow();
+    return;
+  }
+
+  // Confirm mode OR auto-mode fallback — surface in queue window
+  if (!state.pendingSongs.find((s) => s.id === row.id)) {
+    state.pendingSongs.push(row);
+    broadcastSongs();
+    refreshTray();
+    openQueueWindow();
+
+    if (state.mode === 'auto') {
+      // Let the KJ know why it landed here instead of auto-queuing
+      if (!row.karafun_song_id) {
+        console.warn('Auto-queue skipped — song has no karafun_song_id:', row.song_title);
+      } else {
+        console.warn('Auto-queue skipped — KaraFun not connected; song queued manually:', row.song_title);
+      }
     }
   }
 }
@@ -292,6 +304,13 @@ async function queueSong(row) {
     console.log('Queued:', row.song_title, '→ queueId:', queueId);
   } catch (err) {
     console.error('Failed to queue song:', err);
+    // On failure, add to pending so the KJ can manually action it
+    if (!state.pendingSongs.find((s) => s.id === row.id)) {
+      state.pendingSongs.push(row);
+      broadcastSongs();
+      refreshTray();
+      openQueueWindow();
+    }
   }
 }
 
