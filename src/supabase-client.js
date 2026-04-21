@@ -41,17 +41,15 @@ function subscribeToQueue(communityId, sessionId, onNewSong, onStatusChange) {
 
   const client = getClient();
 
-  // Build the seed query (only see songs already there — don't re-alert KJ)
-  let seedQ = client
+  // Seed: mark all currently-submitted songs for this community as already
+  // seen so we don't re-alert the KJ on reconnect.
+  // Always filter by community_id — never by session_id — so a session
+  // mismatch can never silently drop songs.
+  const seedQ = client
     .from('song_selections')
     .select('id')
-    .eq('status', 'submitted');
-
-  if (sessionId) {
-    seedQ = seedQ.eq('session_id', sessionId);
-  } else {
-    seedQ = seedQ.eq('community_id', communityId);
-  }
+    .eq('status', 'submitted')
+    .eq('community_id', communityId);
 
   seedQ.then(({ data, error }) => {
     if (error) {
@@ -60,36 +58,33 @@ function subscribeToQueue(communityId, sessionId, onNewSong, onStatusChange) {
       return;
     }
     (data || []).forEach((r) => _seenIds.add(r.id));
-    const filter = sessionId ? `session ${sessionId}` : `community ${communityId}`;
-    console.log(`Poll seeded (${filter}) — ${_seenIds.size} existing song(s) ignored`);
+    console.log(`Poll seeded (community ${communityId}, session ${sessionId || 'none'}) — ${_seenIds.size} existing song(s) ignored`);
 
     // Flip to "connected"
     if (onStatusChange) onStatusChange('SUBSCRIBED', null);
 
-    // Start polling loop
+    // Start polling loop — community_id is always the filter so session
+    // mismatches never cause songs to go missing.
     _pollTimer = setInterval(
-      () => _pollOnce(communityId, sessionId, onNewSong),
+      () => _pollOnce(communityId, onNewSong),
       POLL_INTERVAL_MS
     );
   });
 }
 
-async function _pollOnce(communityId, sessionId, onNewSong) {
+async function _pollOnce(communityId, onNewSong) {
   const client = getClient();
 
-  let q = client
+  // Always poll by community_id. Session filtering was causing silent song
+  // loss whenever the bridge session_id didn't exactly match what the user
+  // submitted to. Session IDs on individual rows are still stored for admin
+  // reporting; the bridge just doesn't filter on them.
+  const { data, error } = await client
     .from('song_selections')
     .select('*')
     .eq('status', 'submitted')
+    .eq('community_id', communityId)
     .order('created_at', { ascending: true });
-
-  if (sessionId) {
-    q = q.eq('session_id', sessionId);
-  } else {
-    q = q.eq('community_id', communityId);
-  }
-
-  const { data, error } = await q;
 
   if (error) {
     console.error('Poll error:', error.message);
