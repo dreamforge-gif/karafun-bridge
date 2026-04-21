@@ -382,6 +382,22 @@ ipcMain.handle('start-session', async (_event, arg) => {
   const venue    = typeof arg === 'object' && arg ? (arg.venue || null) : null;
   try {
     if (!state.communityId) return { ok: false, error: 'No community selected.' };
+
+    // If this bridge instance already has a session open, end it first so we
+    // never accumulate duplicate "active" rows for the same community.
+    if (state.sessionId) {
+      try {
+        await supabase.cancelSessionSongs(state.sessionId);
+        await supabase.endSession(state.sessionId);
+      } catch (e) {
+        console.warn('[start-session] Could not auto-end previous session:', e.message);
+      }
+      state.sessionId      = null;
+      state.sessionStarted = null;
+      state.sessionHostName = null;
+      state.sessionVenue    = null;
+    }
+
     const session = await supabase.createSession(state.communityId, hostName, venue);
     state.sessionId      = session.id;
     state.sessionStarted = session.started_at;
